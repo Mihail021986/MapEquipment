@@ -1,0 +1,16 @@
+release/block.o
+release/board.o
+release/core.o
+release/port.o
+release/updater.o
+release/waitupdate.o
+release/worker.o
+release/main.o
+release/reader.o
+release/writer.o
+release/moc_core.o
+release/moc_updater.o
+release/moc_waitupdate.o
+release/moc_worker.o
+release/moc_reader.o
+release/moc_writer.o
