@@ -1,0 +1,136 @@
+#include "updater.h"
+#include <QtSql>
+#include <iostream>
+
+Updater::Updater(Block b, QObject *parent=0):QThread(parent)
+{
+    this->block=b;
+}
+void Updater::run(){
+    setlocale(LC_ALL, "");
+    QString nameConnect="connection"+QString::number(QDateTime::currentMSecsSinceEpoch());
+    QSqlDatabase db=QSqlDatabase::addDatabase("QSQLITE", nameConnect);
+    db.setDatabaseName("../../Equipment.db");
+    if(db.open()){
+        std::wcout<<QString("Подключение к базе Equipment выполнено успешно.").toStdWString().c_str()<<std::endl;
+        QSqlQuery selExistBlock(db);
+        QList<long> existID;
+        if(selExistBlock.exec("SELECT Id FROM Block;"))
+        {while (selExistBlock.next()) {
+             existID.push_back(selExistBlock.value(0).toString().toLong());
+             }
+        }
+        else {
+            std::wcout<<QString("Ошибка чтения данных: ").toStdWString().c_str()<<selExistBlock.lastError().text().toStdWString().c_str()<<std::endl;
+            return;
+        }
+        QSqlQuery upBlock(db);
+        QString query;
+        if(existID.indexOf(this->block.ID)==-1)
+        {
+            query="INSERT INTO Block VALUES(%1,'%2','%3',%4,%5,%6,'%7','%8', '%9');";
+            query=query.arg(this->block.ID)
+                 .arg(this->block.name)
+                 .arg(this->block.IP)
+                 .arg(this->block.boardCount)
+                 .arg(this->block.MtR)
+                 .arg(this->block.MtC)
+                 .arg(this->block.description)
+                 .arg(this->block.label)
+                 .arg(QDateTime::currentDateTime().toString());
+        }
+        else{
+            query="UPDATE Block SET Name='%1', IP='%2', BoardCount=%3, MtR=%4, MtC=%5, Description='%6', Label='%7', SET DateModified='%8' WHERE Id=%9;";
+            query=query.arg(this->block.name)
+                 .arg(this->block.IP)
+                 .arg(this->block.boardCount)
+                 .arg(this->block.MtR)
+                 .arg(this->block.MtC)
+                 .arg(this->block.description)
+                 .arg(this->block.label)
+                 .arg(QDateTime::currentDateTime().toString())
+                 .arg(this->block.ID);
+        }
+        if(!upBlock.exec(query)){
+            std::wcout<<QString("Ошибка обновления данных: ").toStdWString().c_str()<<upBlock.lastError().text().toStdWString().c_str()<<std::endl;
+        }
+        else
+            std::wcout<<QString("Данные по Block ").toStdWString().c_str()<<this->block.name.toStdWString().c_str()<<" c IP: "<<this->block.IP.toStdWString().c_str()<<QString(" обновлены.").toStdWString().c_str()<<std::endl;
+        existID.clear();
+        QSqlQuery selExistBoard(db);
+        if(selExistBoard.exec("SELECT Id FROM Board;"))
+        {while (selExistBoard.next()) {
+             existID.push_back(selExistBoard.value(0).toString().toLong());
+             }
+        }
+        else {
+            std::wcout<<QString("Ошибка чтения данных: ").toStdWString().c_str()<<selExistBoard.lastError().text().toStdWString().c_str()<<std::endl;
+            return;
+        }
+        QList<long> existPorts;
+        QSqlQuery selExistPort(db);
+        if(selExistPort.exec("SELECT Id FROM Port;")){
+            while (selExistPort.next()) {
+                existPorts.push_back(selExistPort.value(0).toString().toLong());
+                }
+        }
+       else {
+           std::wcout<<QString("Ошибка чтения данных: ").toStdWString().c_str()<<selExistPort.lastError().text().toStdWString().c_str()<<std::endl;
+           return;
+       }
+        for(int i=0; i<this->block.boards.count(); i++){
+             QSqlQuery upBoard(db);
+             if(existID.indexOf(this->block.boards[i].ID)==-1){
+                 query="INSERT INTO Board VALUES(%1,'%2',%3,%4,'%5','%6',%7);";
+                 query=query.arg(this->block.boards[i].ID)
+                      .arg(this->block.boards[i].name)
+                      .arg(this->block.boards[i].num)
+                      .arg(this->block.boards[i].portCount)
+                      .arg(this->block.boards[i].Algoritms)
+                      .arg(this->block.boards[i].intLinks)
+                      .arg(block.ID);
+             }
+             else{
+                 query="UPDATE Board SET Name='%1', Num=%2, PortCount=%3, Algoritms='%4', IntLinks='%5', Id_block=%6 WHERE Id=%7;";
+                 query=query.arg(this->block.boards[i].name)
+                      .arg(this->block.boards[i].num)
+                      .arg(this->block.boards[i].portCount)
+                      .arg(this->block.boards[i].Algoritms)
+                      .arg(this->block.boards[i].intLinks)
+                      .arg(block.ID)
+                      .arg(this->block.boards[i].ID);}
+        if(!upBlock.exec(query)){
+            std::wcout<<QString("Ошибка обновления данных: ").toStdWString().c_str()<<upBlock.lastError().text().toStdWString().c_str()<<std::endl;
+        }
+        else
+            std::wcout<<QString("Данные по Board ").toStdWString().c_str()<<this->block.boards[i].name.toStdWString().c_str()<<" c N: "<<this->block.boards[i].num<<QString(" обновлены.").toStdWString().c_str()<<std::endl;
+        for(int j=0; j<this->block.boards[i].ports.count(); j++){
+            QSqlQuery upPort(db);
+            if(existPorts.indexOf(this->block.boards[i].ports[j].ID)==-1){
+                query="INSERT INTO Port VALUES(%1,%2,%3,%4,%5);";
+                query=query.arg(this->block.boards[i].ports[j].ID)
+                     .arg(this->block.boards[i].ports[j].num)
+                     .arg(this->block.boards[i].ID)
+                     .arg(this->block.boards[i].ports[j].media)
+                     .arg(this->block.boards[i].ports[j].signal);
+            }
+            else{
+                query="UPDATE Port SET Num=%1, Id_board=%2, Media=%3, Signal=%4 WHERE Id=%5;";
+                query=query.arg(this->block.boards[i].ports[j].num)
+                     .arg(this->block.boards[i].ID)
+                     .arg(this->block.boards[i].ports[j].media)
+                     .arg(this->block.boards[i].ports[j].signal)
+                     .arg(this->block.boards[i].ports[j].ID);
+            }
+            if(!upPort.exec(query)){
+                std::wcout<<QString("Ошибка обновления данных: ").toStdWString().c_str()<<upPort.lastError().text().toStdWString().c_str()<<std::endl;
+            }
+            else
+                std::wcout<<QString("Данные по Port c №").toStdWString().c_str()<<this->block.boards[i].ports[j].num<<QString(" обновлены.").toStdWString().c_str()<<std::endl;
+        }
+    }
+    existID.clear();
+    }
+    else
+       std::cout <<"Неудалось поключиться к базе данных. Ошибка:"<<db.lastError().text().toStdString().c_str()<<std::endl;
+}

@@ -1,0 +1,16 @@
+debug/block.o
+debug/board.o
+debug/core.o
+debug/port.o
+debug/updater.o
+debug/waitupdate.o
+debug/worker.o
+debug/main.o
+debug/reader.o
+debug/writer.o
+debug/moc_core.o
+debug/moc_updater.o
+debug/moc_waitupdate.o
+debug/moc_worker.o
+debug/moc_reader.o
+debug/moc_writer.o
